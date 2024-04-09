@@ -12,12 +12,12 @@ conn = None
 logger = logging.getLogger(__name__)
 read_t = None
 motion_t = None
-motion_update_gap = 0.01
-conn_closing = False
+motion_update_gap = 0.1
+write_lock = threading.RLock()
 
 
 # 连接
-def connect(baud_rate=115200, update_motion_gap_=0.01, timeout=1):
+def connect(baud_rate=115200, update_motion_gap_=0.1, timeout=1):
     global conn
     global read_t
     global motion_t
@@ -42,45 +42,41 @@ def connect(baud_rate=115200, update_motion_gap_=0.01, timeout=1):
 
 
 def read_thread():
-    full_msg = ""
     logger.info("read stm32 message thread started")
     while is_connected():
         try:
-            msg = get_conn().read(2)
+            msg = str(conn.read_until("\r\n".encode("ascii"), size=100), encoding="ascii")
+            msg = msg[:-2]
             if msg:
-                full_msg += str(msg.decode("ascii"))
-                find = full_msg.find("\r\n")
-                if find > 0:
-                    ret_msg = full_msg[:find]
-                    full_msg = full_msg[find:]
-                    logger.debug("received message: {}".format(ret_msg))
-                    if full_msg.startswith("data"):
-                        data.analyse(full_msg)
-                    elif full_msg.startswith("ret_msg"):
-                        logger.info("received message: {}".format(ret_msg))
-                    else:
-                        logger.info("received unknown message: {}".format(ret_msg))
+                logger.debug("received message: {}".format(msg))
+                if msg.startswith("data"):
+                    data.analyse(msg)
+                elif msg.startswith("ret_msg"):
+                    logger.info("received message: {}".format(msg))
+                else:
+                    logger.info("received unknown message: {}".format(msg))
         except Exception as e:
-            print(e)
+            logger.error(e)
             break
     logger.info("serie read thread dead")
 
 
 # 关闭连接
 def close_conn():
-    global conn, conn_closing
-    conn_closing = True
+    global conn
+    write_lock.acquire()
     conn.close()
     if conn.is_open:
         logger.error("Error closing connection")
     else:
         conn = None
         logger.info("Successfully closed connection")
+    write_lock.release()
 
 
 # 检查是否已经连接上
 def is_connected():
-    return not conn_closing and conn is not None and conn.is_open
+    return conn is not None and conn.is_open
 
 
 # 获取连接，使用前最好先检查是否有连接
@@ -93,5 +89,8 @@ def get_conn():
 
 
 def write(msg):
-    get_conn().write(msg.encode('ascii'))
+    write_lock.acquire()
+    get_conn().write(msg.encode("ascii"))
+    get_conn().flush()
     logger.debug("sent msg: {}".format(msg))
+    write_lock.release()
