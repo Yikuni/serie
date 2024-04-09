@@ -1,4 +1,5 @@
 import threading
+import time
 from typing import Union
 
 import serial
@@ -9,13 +10,18 @@ from serie import data
 
 conn = None
 logger = logging.getLogger(__name__)
-debug_thread = None
+read_t = None
+motion_t = None
+motion_update_gap = 0.01
 
 
 # 连接
-def connect(baud_rate=115200, timeout=1):
+def connect(baud_rate=115200, update_motion_gap_=0.01, timeout=1):
     global conn
-    global debug_thread
+    global read_t
+    global motion_t
+    global motion_update_gap
+    motion_update_gap = update_motion_gap_
     ports_list = list(serial.tools.list_ports.comports())
     if len(ports_list) == 0:
         logger.error("No serial ports, connection is not established")
@@ -24,29 +30,33 @@ def connect(baud_rate=115200, timeout=1):
         if conn_.is_open:
             logger.info("Connected to stm32")
             conn = conn_
-            debug_thread = threading.Thread(target=read_thread)
-            debug_thread.start()
+            # 启动读取进程
+            read_t = threading.Thread(target=read_thread)
+            read_t.start()
+            # 启动更新动态进程
+            motion_t = threading.Thread(target=data.motion_thread)
+            motion_t.start()
         else:
             logger.error("Error connecting to stm32")
 
 
 def read_thread():
     full_msg = ""
-    while True:
-        if is_connected():
-            try:
-                msg = get_conn().read(2)
-                if msg:
-                    full_msg += str(msg)
-                    if full_msg.endswith("\r\n"):
-                        full_msg = full_msg[:-2]
-                        logger.debug("received message: {}".format(full_msg))
-                        if full_msg.startswith("data"):
-                            data.analyse(full_msg)
-                        full_msg = ""
-            except Exception as _:
-                break
-        else:
+    logger.info("read stm32 message thread started")
+    while is_connected():
+        try:
+            msg = get_conn().read(2)
+            if msg:
+                full_msg += str(msg)
+                if full_msg.endswith("\r\n"):
+                    full_msg = full_msg[:-2]
+                    logger.debug("received message: {}".format(full_msg))
+                    if full_msg.startswith("data"):
+                        data.analyse(full_msg)
+                    elif full_msg.startswith("rec_msg"):
+                        logger.info("received message: {}".format(full_msg))
+                    full_msg = ""
+        except Exception as _:
             break
     logger.info("serie read thread dead")
 
