@@ -28,5 +28,5 @@ def analyse(msg):
 def motion_thread():
     logger.info("Motion thread started")
     while connection.is_connected():
-        time.sleep(motion_update_gap)
-        write("motion")
+        connection.write("motion")
+        time.sleep(connection.motion_update_gap)

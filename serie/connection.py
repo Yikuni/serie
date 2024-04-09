@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 read_t = None
 motion_t = None
 motion_update_gap = 0.01
+conn_closing = False
 
 
 # 连接
@@ -47,23 +48,28 @@ def read_thread():
         try:
             msg = get_conn().read(2)
             if msg:
-                full_msg += str(msg)
-                if full_msg.endswith("\r\n"):
-                    full_msg = full_msg[:-2]
-                    logger.debug("received message: {}".format(full_msg))
+                full_msg += str(msg.decode("ascii"))
+                find = full_msg.find("\r\n")
+                if find > 0:
+                    ret_msg = full_msg[:find]
+                    full_msg = full_msg[find:]
+                    logger.debug("received message: {}".format(ret_msg))
                     if full_msg.startswith("data"):
                         data.analyse(full_msg)
-                    elif full_msg.startswith("rec_msg"):
-                        logger.info("received message: {}".format(full_msg))
-                    full_msg = ""
-        except Exception as _:
+                    elif full_msg.startswith("ret_msg"):
+                        logger.info("received message: {}".format(ret_msg))
+                    else:
+                        logger.info("received unknown message: {}".format(ret_msg))
+        except Exception as e:
+            print(e)
             break
     logger.info("serie read thread dead")
 
 
 # 关闭连接
 def close_conn():
-    global conn
+    global conn, conn_closing
+    conn_closing = True
     conn.close()
     if conn.is_open:
         logger.error("Error closing connection")
@@ -74,7 +80,7 @@ def close_conn():
 
 # 检查是否已经连接上
 def is_connected():
-    return conn is not None and conn.is_open
+    return not conn_closing and conn is not None and conn.is_open
 
 
 # 获取连接，使用前最好先检查是否有连接
