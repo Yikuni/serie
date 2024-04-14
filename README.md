@@ -50,7 +50,7 @@ serie.data.raw_motion	# numpy数组 (6,) dtype=float16，前三个是三轴加�
 - 获取推进器占空比：pwm get
 
 ``` python
-# 更新pwm速度
+# 更新pwm速度，基本用不到
 serie.command.update_pwm()
 # 获取pwm
 time.sleep(0.01)
@@ -58,8 +58,6 @@ pwm_info = serie.data.pwm_info
 # 设置pwm
 serie.command.set_pwm(0, 100)
 ```
-
-
 
 ## TODO
 

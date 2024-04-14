@@ -17,7 +17,7 @@ write_lock = threading.RLock()
 
 
 # 连接
-def connect(baud_rate=115200, update_motion_gap_=0.1, timeout=1):
+def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.2, timeout=1):
     global conn
     global read_t
     global motion_t
@@ -25,11 +25,11 @@ def connect(baud_rate=115200, update_motion_gap_=0.1, timeout=1):
     motion_update_gap = update_motion_gap_
     ports_list = list(serial.tools.list_ports.comports())
     if len(ports_list) == 0:
-        logger.error("No serial ports, connection is not established")
+        logger.error("No serial ports, connection failed to establish")
     else:
-        conn_ = serial.Serial(ports_list[0].device, baud_rate, timeout=timeout)
+        conn_ = serial.Serial(ports_list[port_index].device, baud_rate, timeout=timeout)
         if conn_.is_open:
-            logger.info("Connected to stm32")
+            logger.info("Connected to port {}".format(ports_list[port_index].device))
             conn = conn_
             # 启动读取进程
             read_t = threading.Thread(target=read_thread)
@@ -90,7 +90,6 @@ def get_conn():
 
 def write(msg):
     write_lock.acquire()
-    get_conn().write(msg.encode("ascii"))
-    get_conn().flush()
+    get_conn().write((msg+";").encode("ascii"))
     logger.debug("sent msg: {}".format(msg))
     write_lock.release()
