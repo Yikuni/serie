@@ -8,6 +8,7 @@ raw_motion = np.zeros(6, dtype=np.float16)  # 加速度和角速度
 motion = np.zeros(6, dtype=np.float16)  # 速度和角度
 motion_last_update = 0
 pwm_info = np.ones(4, dtype=np.int16) * 50
+motion_history = []
 
 
 def analyse(msg):
@@ -20,6 +21,8 @@ def analyse(msg):
         if motion_last_update != 0:
             motion += (now - motion_last_update) * raw_motion
         motion_last_update = now
+        # 将速度加入历史
+        motion_history.append(motion)
     elif split_msg[1] == "pwm":
         # 更新pwm数值
         pwm_info = np.array([int(pwm_i) for pwm_i in split_msg[2:]], dtype=np.int16)

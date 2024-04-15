@@ -1,3 +1,4 @@
+import queue
 import threading
 import time
 from typing import Union
@@ -14,6 +15,7 @@ read_t = None
 motion_t = None
 motion_update_gap = 0.1
 write_lock = threading.RLock()
+write_msg_queue = queue.Queue()
 
 
 # 连接
@@ -34,6 +36,9 @@ def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.2, timeout=1):
             # 启动读取进程
             read_t = threading.Thread(target=read_thread)
             read_t.start()
+            # 启动写消息进程
+            write_t = threading.Thread(target=write_thread)
+            write_t.start()
             # 启动更新动态进程
             motion_t = threading.Thread(target=data.motion_thread)
             motion_t.start()
@@ -89,7 +94,14 @@ def get_conn():
 
 
 def write(msg):
-    write_lock.acquire()
-    get_conn().write((msg+";").encode("ascii"))
+    write_msg_queue.put(msg)
     logger.debug("sent msg: {}".format(msg))
-    write_lock.release()
+
+
+def write_thread():
+    while True:
+        time.sleep(0.01)
+        if not write_msg_queue.empty():
+            msg = write_msg_queue.get()
+            get_conn().write((msg + ";").encode("ascii"))
+            logger.debug("sent msg: {}".format(msg))
