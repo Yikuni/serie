@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, filename='log.log', filemode='w',
                     , datefmt="%Y-%m-%d %H:%M:%S")
 console = logging.StreamHandler()
 logging.getLogger().addHandler(console)
-serie.connection.connect(port_index=1)  # 用电脑调试的时候用
+serie.connection.connect(port_index=0)  # 用电脑调试的时候用
 # serie.connection.connect(port_index=0)  # 实机使用
 if serie.connection.is_connected():
     time.sleep(1)
@@ -19,8 +19,8 @@ if serie.connection.is_connected():
     serie.command.update_pwm()
     time.sleep(1)
     pwm_info = serie.data.pwm_info
-    serie.command.set_pwm(0, 100)
-    time.sleep(2)
     serie.command.set_pwm(0, 50)
+    time.sleep(2)
+    serie.command.set_pwm(0, 100)
     time.sleep(1)
 serie.connection.close_conn()

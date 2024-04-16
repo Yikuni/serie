@@ -1,4 +1,6 @@
 import logging
+
+import serie.data
 from serie import connection
 
 logger = logging.getLogger(__name__)
@@ -14,3 +16,12 @@ def set_pwm(index, speed):
 
 def update_pwm():
     connection.write("pwm get")
+
+
+def get_pressure(callback=None):
+    connection.write("pressure")
+    serie.data.pressure_callback = callback
+
+
+def send_lora_msg(msg):
+    connection.write(f"lora {msg}")

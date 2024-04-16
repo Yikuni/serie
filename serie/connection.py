@@ -1,7 +1,7 @@
+import logging
 import queue
 import threading
 import time
-from typing import Union
 
 import serial
 import serial.tools.list_ports
@@ -18,6 +18,14 @@ write_lock = threading.RLock()
 write_msg_queue = queue.Queue()
 
 
+def get_ports():
+    msg = ""
+    names = [device.name + " " + device.serial_number for device in serial.tools.list_ports.comports()]
+    for name in names:
+        msg += name
+        msg += "\n"
+    msg = msg[:-1]
+    return msg
 # 连接
 def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.2, timeout=1):
     global conn

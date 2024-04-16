@@ -39,7 +39,12 @@ serie.data.motion	# numpy数组 (6,) dtype=float16，前三个是三轴速度，
 ``` python
 serie.data.raw_motion	# numpy数组 (6,) dtype=float16，前三个是三轴加速度，后三个是三轴角速度
 ```
-
+### 获取压强
+> 获取压强存在一定的延迟(<0.04s)，需要传入一个callback函数，该函数接受一个float参数，会在获取到压强后自动执行
+> - 该函数会在读取消息线程中运行，请不要安排耗时长的任务！！！
+``` python
+serie.command.get_pressure(callback)
+```
 ### 推进器
 
 消息：pwm set/get
@@ -53,12 +58,15 @@ serie.data.raw_motion	# numpy数组 (6,) dtype=float16，前三个是三轴加�
 # 更新pwm速度，基本用不到
 serie.command.update_pwm()
 # 获取pwm
-time.sleep(0.01)
+time.sleep(0.03)
 pwm_info = serie.data.pwm_info
 # 设置pwm
 serie.command.set_pwm(0, 100)
 ```
-
+### 与lora通信
+``` python
+serie.command.send_lora_msg(msg)
+```
 ## TODO
 
 - pwm设置的数值比较魔幻
