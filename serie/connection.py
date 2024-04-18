@@ -20,14 +20,14 @@ write_msg_queue = queue.Queue()
 
 def get_ports():
     msg = ""
-    names = [device.name + " " + device.serial_number for device in serial.tools.list_ports.comports()]
+    names = [device.name for device in serial.tools.list_ports.comports()]
     for name in names:
         msg += name
         msg += "\n"
     msg = msg[:-1]
     return msg
 # 连接
-def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.2, timeout=1):
+def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.1, timeout=1):
     global conn
     global read_t
     global motion_t
@@ -47,9 +47,7 @@ def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.2, timeout=1):
             # 启动写消息进程
             write_t = threading.Thread(target=write_thread)
             write_t.start()
-            # 启动更新动态进程
-            motion_t = threading.Thread(target=data.motion_thread)
-            motion_t.start()
+
         else:
             logger.error("Error connecting to stm32")
 
@@ -107,7 +105,7 @@ def write(msg):
 
 
 def write_thread():
-    while True:
+    while is_connected():
         time.sleep(0.01)
         if not write_msg_queue.empty():
             msg = write_msg_queue.get()

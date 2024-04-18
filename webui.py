@@ -16,8 +16,6 @@ port_i_value = 0
 def tab_main():
     # 连接按钮
     with gr.Row():
-        start_conn = None
-
         def get_conn_label():
             return "断开连接" if serie.connection.is_connected() else "建立连接"
 
@@ -31,18 +29,21 @@ def tab_main():
                 port_i_value = value
 
             port_i.change(fn=update_port_value, inputs=port_i)
+
         with gr.Column(scale=1):
             start_conn = gr.Button(value=get_conn_label, every=0.5)
+
+            def connect_button_event():
+                if serie.connection.is_connected():
+                    serie.connection.close_conn()
+                else:
+                    serie.connection.connect(port_index=port_i_value)
+
+            start_conn.click(fn=connect_button_event)
         with gr.Column(scale=1):
             gr.Checkbox(value=serie.connection.is_connected, every=0.5, label="连接状态")
 
-        def connect_button_event():
-            if serie.connection.is_connected():
-                serie.connection.close_conn()
-            else:
-                serie.connection.connect(port_index=port_i_value)
 
-        start_conn.click(fn=connect_button_event)
 
     # LED灯
     led = gr.Checkbox(value=False, label="LED灯")
@@ -79,7 +80,32 @@ def tab_main():
 
 
 def tab_motion():
-    gr.Image(value=serie.data.motion_history_plot, label="速度图像", every=1)
+    with gr.Row():
+        with gr.Column(scale=1):
+            motion_button = gr.Button("开启速度解算进程", every=1)
+            def motion_button_event():
+                if not serie.data.is_motion_t_alive():
+                   serie.data.start_motion_thread()
+            motion_button.click(fn=motion_button_event)
+        with gr.Column(scale=1):
+            gr.Button("清空姿态数据").click(fn=serie.data.init_motion_data)
+        # with gr.Column(scale=1):
+        #     gr.Button("校准角速度误差").click(fn=serie.data.cal_raw_motion_g_offset)
+        with gr.Column(scale=1):
+            offset_button = gr.Button(value="校准速度误差")
+            offset_button.click(fn=serie.data.cal_raw_motion_offset)
+        with gr.Column(scale=1):
+            gr.Checkbox(label="速度解算线程状态", interactive=False, every=1, value=serie.data.is_motion_t_alive)
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Image(value=serie.data.motion_history_plot, label="速度图像", every=1)
+        with gr.Column(scale=1):
+            gr.Image(value=serie.data.raw_motion_history_plot, label="加速度图像", every=1)
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Image(value=serie.data.motion_history_plot2, label="角度图像", every=1)
+        with gr.Column(scale=1):
+            gr.Image(value=serie.data.raw_motion_history_plot2, label="角速度图像", every=1)
 
 
 
