@@ -93,7 +93,7 @@ def tab_motion():
         #     gr.Button("校准角速度误差").click(fn=serie.data.cal_raw_motion_g_offset)
         with gr.Column(scale=1):
             offset_button = gr.Button(value="校准速度误差")
-            offset_button.click(fn=serie.data.cal_raw_motion_offset)
+            offset_button.click(fn=serie.data.motion_calculator.correct_raw_motion)
         with gr.Column(scale=1):
             gr.Checkbox(label="速度解算线程状态", interactive=False, every=1, value=serie.data.is_motion_t_alive)
     with gr.Row():
