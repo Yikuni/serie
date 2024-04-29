@@ -11,7 +11,9 @@ def read_log():
     with open('log.log', 'r') as file:
         return file.read()
 
+
 port_i_value = 0
+
 
 def tab_main():
     # 连接按钮
@@ -29,8 +31,6 @@ def tab_main():
                 port_i_value = value
 
             port_i.change(fn=update_port_value, inputs=port_i)
-
-        with gr.Column(scale=1):
             start_conn = gr.Button(value=get_conn_label, every=0.5)
 
             def connect_button_event():
@@ -40,14 +40,35 @@ def tab_main():
                     serie.connection.connect(port_index=port_i_value)
 
             start_conn.click(fn=connect_button_event)
-        with gr.Column(scale=1):
             gr.Checkbox(value=serie.connection.is_connected, every=0.5, label="连接状态")
-
-
-
+        with gr.Column(scale=1):
+            gr.Button(value="初始化dmp").click(fn=serie.command.init_dmp)
+            gr.Button(value="启动dmp更新").click(fn=serie.command.start_dmp)
+            gr.Button(value="结束dmp更新").click(fn=serie.command.stop_dmp)
+            gr.Button(value="初始化水压传感器").click(fn=serie.command.init_ms5837)
     # LED灯
-    led = gr.Checkbox(value=False, label="LED灯")
-    led.change(fn=serie.command.led, inputs=led)
+    with gr.Row():
+        led = gr.Checkbox(value=False, label="LED灯")
+        led.change(fn=serie.command.led, inputs=led)
+
+        def led2():
+            for _ in range(2):
+                serie.command.led(False)
+                time.sleep(0.5)
+                serie.command.led(True)
+                time.sleep(0.5)
+            serie.command.led(False)
+
+        def led3():
+            for _ in range(3):
+                serie.command.led(False)
+                time.sleep(0.5)
+                serie.command.led(True)
+                time.sleep(0.5)
+            serie.command.led(False)
+
+        gr.Button("LED灯闪2下").click(fn=led2)
+        gr.Button("LED灯闪3下").click(fn=led3)
 
     with gr.Row():
         with gr.Column(scale=1):
@@ -83,14 +104,14 @@ def tab_motion():
     with gr.Row():
         with gr.Column(scale=1):
             motion_button = gr.Button("开启速度解算进程", every=1)
+
             def motion_button_event():
                 if not serie.data.is_motion_t_alive():
-                   serie.data.start_motion_thread()
+                    serie.data.start_motion_thread()
+
             motion_button.click(fn=motion_button_event)
         with gr.Column(scale=1):
-            gr.Button("清空姿态数据").click(fn=serie.data.init_motion_data)
-        # with gr.Column(scale=1):
-        #     gr.Button("校准角速度误差").click(fn=serie.data.cal_raw_motion_g_offset)
+            gr.Button("清空姿态数据").click(fn=serie.data.motion_calculator.clear_data)
         with gr.Column(scale=1):
             offset_button = gr.Button(value="校准速度误差")
             offset_button.click(fn=serie.data.motion_calculator.correct_raw_motion)
@@ -106,7 +127,6 @@ def tab_motion():
             gr.Image(value=serie.data.motion_history_plot2, label="角度图像", every=1)
         with gr.Column(scale=1):
             gr.Image(value=serie.data.raw_motion_history_plot2, label="角速度图像", every=1)
-
 
 
 def main():
@@ -127,7 +147,7 @@ def main():
         with gr.Tab(label="姿态数据"):
             tab_motion()
 
-    app.launch()
+    app.launch(share=True)
 
 
 if __name__ == "__main__":

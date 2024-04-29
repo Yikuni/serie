@@ -1,5 +1,25 @@
 # 赛丽艾模块使用说明
+
+---
+
+## 安装
+
+环境要求：python3
+
+~~~ sh
+pip install -r requirements.txt
+~~~
+
+## 打开控制面板
+
+``` sh
+python webui.py
+```
+
+然后在电脑上用浏览器打开 hhttp://127.0.0.1:7860，其中ip要替换为树莓派的局域网ip
+
 ## 连接
+
 ### 建立连接
 ```python
 serie.connection.connect()  # 建立连接
@@ -16,35 +36,27 @@ serie.connection.close_conn()   # 断开连接
 返回消息：ret_msg led on/off
 
 ``` python
-led(true)	# 亮灯
-led(false)	# 灭灯
+serie.command.led(true)	# 亮灯
+serie.command.led(false)	# 灭灯
 ```
 
-### 姿态
-
-消息：motion
-
-返回：data motion 6轴float数据
-
-更新流程：data.py中启动motion_thread，每一定时间发送motion消息 --> connection.py中的read_thread读取到data消息后通知data.py中的analyze分析消息，从而更新加速度，再更新速度
-
-#### 获取速度和角度
-
-``` python
-serie.data.motion	# numpy数组 (6,) dtype=float16，前三个是三轴速度，后三个是三轴角度
-```
-
-#### 获取加速度和角速度
-
-``` python
-serie.data.raw_motion	# numpy数组 (6,) dtype=float16，前三个是三轴加速度，后三个是三轴角速度
-```
 ### 获取压强
+
+__第一次获取压强前需要初始化__：
+
+``` python
+serie.command.init_ms5837()
+```
+
 > 获取压强存在一定的延迟(<0.04s)，需要传入一个callback函数，该函数接受一个float参数，会在获取到压强后自动执行
 > - 该函数会在读取消息线程中运行，请不要安排耗时长的任务！！！
 ``` python
-serie.command.get_pressure(callback)
+def callback_method(pressure):
+    logger.info("pressure: " + str(pressure))
+serie.command.get_pressure(callback_method)
 ```
+压强单位：mbar，即$ 10^{-2} Pa $
+
 ### 推进器
 
 消息：pwm set/get
@@ -64,10 +76,35 @@ pwm_info = serie.data.pwm_info
 serie.command.set_pwm(0, 100)
 ```
 ### 与lora通信
+
 ``` python
+msg = "this is a message"
 serie.command.send_lora_msg(msg)
 ```
-## TODO
+### 姿态
 
-- pwm设置的数值比较魔幻
-- mpu6050数值偏差有点大
+#### 初始化
+
+``` python
+serie.command.init_dmp()	# 初始化dmp
+time.sleep(0.5)
+serie.command.start_dmp()	# 开启stm32内部持续读取dmp
+serie.data.start_motion_thread()	# 开启读取stm32姿态数据的进程
+```
+
+#### 消除误差
+
+由于mpu6050存在一定的误差，所以在初始化完毕后大约10s需要进行纠正
+
+``` python
+serie.data.motion_calculator.correct_raw_motion()
+```
+
+#### 获取角度和速度
+
+下面两项的类型都是numpy.ndarray，shape为(3,)
+
+``` python
+angle = serie.data.motion_calculator.angle
+velocity = serie.data.motion_calculator.velocity
+```

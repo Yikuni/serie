@@ -25,3 +25,19 @@ def get_pressure(callback=None):
 
 def send_lora_msg(msg):
     connection.write(f"lora {msg}")
+
+
+def init_dmp():
+    connection.write("init_dmp")
+
+
+def init_ms5837():
+    connection.write("int_ms")
+
+
+def start_dmp():
+    connection.write("dmp_start")
+
+
+def stop_dmp():
+    connection.write("dmp_stop")

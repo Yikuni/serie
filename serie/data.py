@@ -4,20 +4,14 @@ from matplotlib import pyplot as plt, image
 import threading
 from serie import connection
 import logging
-from serie.motion import FirstMotionCalculator, MotionCalculator
+from serie.motion import DMPMotionCalculator, MotionCalculator
 
 logger = logging.getLogger(__name__)
 pwm_info = np.ones(4, dtype=np.int16) * 50
 pressure = 0.0
 pressure_callback = None
 motion_t = None
-motion_calculator: MotionCalculator = FirstMotionCalculator()
-
-def reset_motion():
-    global motion_calculator
-    motion_calculator = FirstMotionCalculator()
-
-reset_motion()
+motion_calculator: MotionCalculator = DMPMotionCalculator()
 
 def analyse(msg):
     global pwm_info, pressure, pressure_callback
@@ -25,6 +19,10 @@ def analyse(msg):
     if split_msg[1] == "motion":
         # 更新速度
         motion_calculator.update(
+            np.array([float(word) for word in split_msg[2:]], dtype=np.float32)
+        )
+    elif split_msg[1] == "dmp":
+        motion_calculator.update_dmp(
             np.array([float(word) for word in split_msg[2:]], dtype=np.float32)
         )
     elif split_msg[1] == "pwm":
@@ -42,7 +40,7 @@ def analyse(msg):
 def motion_thread():
     logger.info("Motion thread started")
     while connection.is_connected():
-        connection.write("motion")
+        connection.write("dmp")
         time.sleep(connection.motion_update_gap)
     logger.info("Motion thread dead")
 

@@ -1,6 +1,9 @@
 import time
 
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def rotate_vector(x, y, z, theta_x, theta_y, theta_z):
@@ -57,38 +60,74 @@ class MotionCalculator:
             now = time.time()
             delta_time = now - self.last_update_time
             self.last_update_time = now
+            raw_motion = self.correct_acc(raw_motion)
             self.raw_motion_history.append(raw_motion.copy())
-            self.velocity = self.updateVelocity(raw_motion[:3], delta_time)
-            self.angle = self.updateAngle(raw_motion[3:], delta_time)
+            self.velocity = self.update_velocity(raw_motion[:3], delta_time)
+            self.angle = self.update_angle(raw_motion[3:], delta_time)
             self.motion_history.append(np.array([*self.velocity.copy(), *self.angle.copy()]))
 
-    def updateVelocity(self, acc: np.ndarray, delta_time: float) -> np.ndarray:
-        pass
 
-    def updateAngle(self, av: np.ndarray, delta_time: float) -> np.ndarray:
-        pass
+    def update_dmp(self, dmp_data: np.ndarray):
+        self.angle = np.array([-dmp_data[1], -dmp_data[0], dmp_data[2]])
+
+    def update_velocity(self, acc: np.ndarray, delta_time: float) -> np.ndarray:
+        raise NotImplementedError()
+
+    def update_angle(self, av: np.ndarray, delta_time: float) -> np.ndarray:
+        raise NotImplementedError()
+
+    def correct_acc(self, raw_motion: np.ndarray) -> np.ndarray:
+        raise NotImplementedError()
 
     def correct_raw_motion(self):
-        pass
+        raise NotImplementedError()
 
+    def clear_other_data(self):
+        return
+    def clear_data(self):
+        self.velocity = np.zeros(3, dtype=np.float32)
+        self.angle = np.zeros(3, dtype=np.float32)
+        self.acc = np.zeros(3, dtype=np.float32)
+        self.av = np.zeros(3, dtype=np.float32)
+        self.motion_history = []
+        self.raw_motion_history = []
+        self.last_update_time = 0
+        self.clear_other_data()
 
-class FirstMotionCalculator(MotionCalculator):
+class DMPMotionCalculator(MotionCalculator):
     def __init__(self):
         super().__init__()
         self.raw_motion_offset = np.zeros(6, dtype=np.float32)
-    def updateVelocity(self, acc: np.ndarray, delta_time: float) -> np.ndarray:
-        return self.velocity + acc * delta_time
+        self.filter_size = 3
+        self.filter_value = 0.005
 
-    def updateAngle(self, av: np.ndarray, delta_time: float) -> np.ndarray:
-        return self.angle + av * delta_time
+    def update_velocity(self, acc: np.ndarray, delta_time: float) -> np.ndarray:
+        if len(self.raw_motion_history) > self.filter_size:
+            for i in range(self.filter_size):
+                for j in range(self.filter_size):
+                    if abs(self.raw_motion_history[-j-1][i]) < self.filter_value:
+                        return self.velocity
+                acc[i] = np.array(self.raw_motion_history)[-self.filter_size:, i].mean()
+            return self.velocity + acc * delta_time
+        else:
+            return self.velocity
+    def update_angle(self, av: np.ndarray, delta_time: float) -> np.ndarray:
+        return self.angle
 
 
+    def correct_acc(self, raw_motion: np.ndarray) -> np.ndarray:
+        raw_motion[:3] += - self.raw_motion_offset[:3] - rotate_vector(0, 0, 1, *self.angle)
+        return raw_motion
     def correct_raw_motion(self):
-        self.raw_motion_offset = np.array(self.raw_motion_history).mean(axis=0) - np.array([0, 0, 1, 0, 0, 0])
-        self.motion_history = []
-        self.raw_motion_history = []
+        self.raw_motion_offset = np.array(self.raw_motion_history).mean(axis=0)
+        self.motion_history.clear()
+        self.raw_motion_history.clear()
         self.last_update_time = 0
         self.velocity = np.zeros(3, dtype=np.float32)
         self.angle = np.zeros(3, dtype=np.float32)
         self.acc = np.zeros(3, dtype=np.float32)
         self.av = np.zeros(3, dtype=np.float32)
+        logger.info("corrected raw motion")
+
+    def clear_other_data(self):
+        self.raw_motion_offset = np.zeros(6, dtype=np.float32)
