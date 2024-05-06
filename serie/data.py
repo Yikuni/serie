@@ -5,7 +5,7 @@ import threading
 from serie import connection
 import logging
 from serie.motion import DMPMotionCalculator, MotionCalculator
-
+from serie import command
 logger = logging.getLogger(__name__)
 pwm_info = np.ones(4, dtype=np.int16) * 50
 pressure = 0.0
@@ -22,6 +22,9 @@ def analyse(msg):
             np.array([float(word) for word in split_msg[2:]], dtype=np.float32)
         )
     elif split_msg[1] == "dmp":
+        if split_msg[2] == "init":
+            if split_msg[3] == "success":
+                command.start_dmp()
         motion_calculator.update_dmp(
             np.array([float(word) for word in split_msg[2:]], dtype=np.float32)
         )

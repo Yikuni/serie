@@ -26,20 +26,27 @@ def get_ports():
         msg += "\n"
     msg = msg[:-1]
     return msg
+
+
 # 连接
-def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.1, timeout=1):
+def connect(device_name=None, baud_rate=115200, port_index=0, update_motion_gap_=0.1, timeout=1):
     global conn
     global read_t
     global motion_t
     global motion_update_gap
     motion_update_gap = update_motion_gap_
     ports_list = list(serial.tools.list_ports.comports())
-    if len(ports_list) == 0:
+    if len(ports_list) == 0 and device_name is None:
         logger.error("No serial ports, connection failed to establish")
     else:
-        conn_ = serial.Serial(ports_list[port_index].device, baud_rate, timeout=timeout)
-        if conn_.is_open:
+        if device_name is not None:
+            conn_ = serial.Serial(device_name, baud_rate, timeout=timeout)
+            logger.info(f"Connected to port {device_name}")
+
+        else:
+            conn_ = serial.Serial(ports_list[port_index].device, baud_rate, timeout=timeout)
             logger.info("Connected to port {}".format(ports_list[port_index].device))
+        if conn_.is_open:
             conn = conn_
             # 启动读取进程
             read_t = threading.Thread(target=read_thread)
@@ -47,10 +54,8 @@ def connect(baud_rate=115200, port_index=0, update_motion_gap_=0.1, timeout=1):
             # 启动写消息进程
             write_t = threading.Thread(target=write_thread)
             write_t.start()
-
         else:
-            logger.error("Error connecting to stm32")
-
+            logger.info("Connection failed")
 
 def read_thread():
     logger.info("read stm32 message thread started")
