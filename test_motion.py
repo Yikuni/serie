@@ -14,11 +14,15 @@ time.sleep(1)
 serie.command.init_dmp()	# 初始化dmp
 time.sleep(5)
 serie.data.start_motion_thread()	# 开启读取stm32姿态数据的进程
-for i in range(5):
-    if len(serie.data.motion_calculator.raw_motion_history) == 0:
-        i -= 1
-        continue
-    logger.info(serie.data.motion_calculator.raw_motion_history[-1])
-    time.sleep(1)
+time.sleep(3)
+try:
+    for i in range(5):
+        if len(serie.data.motion_calculator.raw_motion_history) == 0:
+            i -= 1
+            continue
+        logger.info(serie.data.motion_calculator.raw_motion_history[-1])
+        time.sleep(1)
+except KeyboardInterrupt:
+    pass
 serie.command.stop_dmp()	# 开启stm32内部持续读取dmp
 serie.connection.close_conn()

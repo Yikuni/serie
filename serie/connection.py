@@ -69,6 +69,7 @@ def read_thread():
                     data.analyse(msg)
                 elif msg.startswith("ret_msg"):
                     logger.info("received message: {}".format(msg))
+                    data.analyse_ret_msg(msg)
                 else:
                     logger.info("received unknown message: {}".format(msg))
         except Exception as e:

@@ -36,16 +36,6 @@ for i in range(6):
     time.sleep(1)
     serie.command.set_pwm(i, 50)
     time.sleep(1)
-logger.info("Testing ms5837")
-serie.command.init_ms5837()
-time.sleep(5)
-
-
-def pressure_simple_callback(pressure):
-    logger.info("Pressure callback called, and pressure is {pressure}".format(pressure=pressure))
-
-
-serie.command.get_pressure()
 time.sleep(1)
 logger.info("Test completed")
 serie.connection.close_conn()

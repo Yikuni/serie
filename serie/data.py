@@ -12,7 +12,7 @@ pressure = 0.0
 pressure_callback = None
 motion_t = None
 motion_calculator: MotionCalculator = DMPMotionCalculator()
-
+ret_msg_analyzer = []
 def analyse(msg):
     global pwm_info, pressure, pressure_callback
     split_msg = msg.split()
@@ -22,9 +22,6 @@ def analyse(msg):
             np.array([float(word) for word in split_msg[2:]], dtype=np.float32)
         )
     elif split_msg[1] == "dmp":
-        if split_msg[2] == "init":
-            if split_msg[3] == "success":
-                command.start_dmp()
         motion_calculator.update_dmp(
             np.array([float(word) for word in split_msg[2:]], dtype=np.float32)
         )
@@ -39,6 +36,14 @@ def analyse(msg):
             pressure_callback(pressure)
             pressure_callback = None
 
+# msg格式： ret_msg 消息
+def analyse_ret_msg(msg):
+    for analyzer in ret_msg_analyzer:
+        analyzer(msg)
+
+#
+def add_ret_msg_analyzer(analyzer_func):
+    ret_msg_analyzer.append(analyzer_func)
 
 def motion_thread():
     logger.info("Motion thread started")
