@@ -22,7 +22,14 @@ def tab_main():
             return "断开连接" if serie.connection.is_connected() else "建立连接"
 
         with gr.Column(scale=1):
-            gr.TextArea(value=serie.connection.get_ports, every=0.5, label="端口信息", interactive=False)
+            gr.TextArea(value=serie.connection.get_ports, every=0.5, label="端口信息", interactive=False, lines=2)
+            gr.Checkbox(value=serie.connection.is_connected, every=0.5, label="连接状态")
+        with gr.Column(scale=1):
+            port_name = gr.Textbox(value="/dev/ttyS5", interactive=True)
+            port_name_button = gr.Button("通过端口名称连接")
+            def connect_through_name():
+                serie.connection.connect(device_name=port_name.value)
+            port_name_button.click(fn=connect_through_name)
         with gr.Column(scale=1):
             port_i = gr.Number(label="选择的端口索引", value=port_i_value)
 
@@ -40,10 +47,8 @@ def tab_main():
                     serie.connection.connect(port_index=port_i_value)
 
             start_conn.click(fn=connect_button_event)
-            gr.Checkbox(value=serie.connection.is_connected, every=0.5, label="连接状态")
         with gr.Column(scale=1):
             gr.Button(value="初始化dmp").click(fn=serie.command.init_dmp)
-            gr.Button(value="启动dmp更新").click(fn=serie.command.start_dmp)
             gr.Button(value="结束dmp更新").click(fn=serie.command.stop_dmp)
             gr.Button(value="初始化水压传感器").click(fn=serie.command.init_ms5837)
     # LED灯
@@ -99,6 +104,26 @@ def tab_main():
             gr_button = gr.Button(value="送信")
             gr_button.click(fn=serie.command.send_lora_msg, inputs=text)
 
+def plot_thread():
+    while serie.data.motion_t is not None and serie.data.motion_t.is_alive():
+        time.sleep(0.5)
+        serie.data.motion_history_plot()
+        serie.data.raw_motion_history_plot()
+        serie.data.motion_history_plot2()
+        serie.data.raw_motion_history_plot2()
+
+
+def plot_name_1():
+    return "motion.png"
+
+def plot_name_2():
+    return "raw_motion.png"
+
+def plot_name_3():
+    return "motion2.png"
+
+def plot_name_4():
+    return "raw_motion2.png"
 
 def tab_motion():
     with gr.Row():
@@ -108,7 +133,9 @@ def tab_motion():
             def motion_button_event():
                 if not serie.data.is_motion_t_alive():
                     serie.data.start_motion_thread()
-
+                    time.sleep(0.5)
+                    thread = threading.Thread(target=plot_thread)
+                    thread.start()
             motion_button.click(fn=motion_button_event)
         with gr.Column(scale=1):
             gr.Button("清空姿态数据").click(fn=serie.data.motion_calculator.clear_data)
@@ -119,14 +146,14 @@ def tab_motion():
             gr.Checkbox(label="速度解算线程状态", interactive=False, every=1, value=serie.data.is_motion_t_alive)
     with gr.Row():
         with gr.Column(scale=1):
-            gr.Image(value=serie.data.motion_history_plot, label="速度图像", every=1)
+            gr.Image(value=plot_name_1, label="速度图像", every=1)
         with gr.Column(scale=1):
-            gr.Image(value=serie.data.raw_motion_history_plot, label="加速度图像", every=1)
+            gr.Image(value=plot_name_2, label="加速度图像", every=1)
     with gr.Row():
         with gr.Column(scale=1):
-            gr.Image(value=serie.data.motion_history_plot2, label="角度图像", every=1)
+            gr.Image(value=plot_name_3, label="角度图像", every=1)
         with gr.Column(scale=1):
-            gr.Image(value=serie.data.raw_motion_history_plot2, label="角速度图像", every=1)
+            gr.Image(value=plot_name_4, label="角速度图像", every=1)
 
 
 def main():
@@ -147,7 +174,7 @@ def main():
         with gr.Tab(label="姿态数据"):
             tab_motion()
 
-    app.launch(share=True)
+    app.launch(server_name="0.0.0.0")
 
 
 if __name__ == "__main__":
