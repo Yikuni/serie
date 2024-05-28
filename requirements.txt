@@ -2,3 +2,5 @@ pyserial
 numpy
 gradio
 matplotlib
+torch
+torchvision

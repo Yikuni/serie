@@ -4,7 +4,7 @@ import threading
 import logging
 
 import serie.connection
-
+from serie.motion import MotionState, MotionController
 
 # 读取日志
 def read_log():
@@ -156,6 +156,44 @@ def tab_motion():
             gr.Image(value=plot_name_4, label="角速度图像", every=1)
 
 
+def tab_pwm_control():
+    mc = MotionController()
+    with gr.Row():
+        gr.Button("初始化").click(fn=mc.init_pwm)
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Textbox(label="状态1", value=mc.state1.name, every=1)
+        with gr.Column(scale=1):
+            with gr.Row():
+                def update_state1():
+                    mc.update_state(MotionState.STOP)
+                gr.Button("停止").click(fn=update_state1)
+                def update_state2():
+                    mc.update_state(MotionState.NO_TURN)
+                gr.Button("直行").click(fn=update_state2)
+        with gr.Column(scale=1):
+            with gr.Row():
+                def update_state3():
+                    mc.update_state(MotionState.TURN_LEFT)
+                gr.Button("左转").click(fn=update_state3)
+                def update_state4():
+                    mc.update_state(MotionState.TURN_RIGHT)
+                gr.Button("右转").click(fn=update_state4)
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Textbox(label="状态2", value=mc.state2.name, every=1)
+        with gr.Column(scale=1):
+            with gr.Row():
+                def update_state5():
+                    mc.update_state(MotionState.NO_TILT)
+                gr.Button("不倾斜").click(fn=update_state5)
+                def update_state6():
+                    mc.update_state(MotionState.TILT_RIGHT)
+                gr.Button("右倾").click(fn=update_state6)
+        with gr.Column(scale=1):
+            def update_state7():
+                mc.update_state(MotionState.TILT_LEFT)
+            gr.Button("左倾").click(fn=update_state7)
 def main():
     # 配置日志
     logging.basicConfig(level=logging.INFO, filename='log.log', filemode='w+',
@@ -173,6 +211,8 @@ def main():
             tab_main()
         with gr.Tab(label="姿态数据"):
             tab_motion()
+        with gr.Tab(label="推进器控制"):
+            tab_pwm_control()
 
     app.launch(server_name="0.0.0.0")
 

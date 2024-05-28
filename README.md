@@ -27,7 +27,6 @@ serie.connection.connect(device_name="/dev/ttyS5") # 建立连接
 serie.connection.close_conn()   # 断开连接
 ```
 
-
 ## 指令
 
 >  赛丽艾通过指令控制stm32做出相应行动
@@ -63,6 +62,25 @@ serie.command.get_pressure(callback_method)
 压强单位：mbar，即$ 10^{-2} Pa $
 
 ### 推进器
+
+#### 通过MotionController控制
+
+``` python
+from serie.motion import MotionController, MotionState
+
+mc = MotionController()  # 初始化MotionController对象，保存在全局
+mc.update_state(MotionState.TILT_LEFT)  # 需要改变姿态的时候调用
+```
+
+其中，update_state函数接收一个枚举类，可用参数如下，具体含义在源码有注释：
+
+![image-20240528180339102](./README.assets/image-20240528180339102.png)
+
+update_state函数只有发现传入的状态和上次不同时才会更新推进器状态
+
+#### 通过指令控制
+
+> 不推荐使用
 
 消息：pwm set/get
 
@@ -138,4 +156,23 @@ def dmp_init_listener(msg):
 
 data.add_ret_msg_analyzer(dmp_init_listener)
 ~~~
+
+## 图片分类
+
+先初始化，pth文件放在根目录下：
+
+```python
+import torch
+from serie.lenet_serie_predict import LeNet, predict
+net = LeNet()
+net.load_state_dict(torch.load('LeNet_serie_100.pth', map_location=torch.device('cpu')))
+```
+
+再识别，返回类别标号：
+
+> 输入的图片文件大小为（3，64，64）
+
+``` python
+res = predict(net, 'target.jpg').item()
+```
 
