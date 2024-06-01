@@ -44,7 +44,7 @@ def tab_main():
                 if serie.connection.is_connected():
                     serie.connection.close_conn()
                 else:
-                    serie.connection.connect(port_index=port_i_value)
+                    serie.connection.connect(port_index=port_i_value, msg_send_interval=0.5)
 
             start_conn.click(fn=connect_button_event)
         with gr.Column(scale=1):
@@ -194,6 +194,21 @@ def tab_pwm_control():
             def update_state7():
                 mc.update_state(MotionState.TILT_LEFT)
             gr.Button("左倾").click(fn=update_state7)
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Textbox(label="状态3", value=mc.state3.name, every=1)
+        with gr.Column(scale=1):
+            with gr.Row():
+                def update_state8():
+                    mc.update_state(MotionState.NO_UP_OR_DOWN)
+                gr.Button("悬浮").click(fn=update_state8)
+                def update_state9():
+                    mc.update_state(MotionState.DOWN)
+                gr.Button("下沉").click(fn=update_state9)
+        with gr.Column(scale=1):
+            def update_state10():
+                mc.update_state(MotionState.UP)
+            gr.Button("上浮").click(fn=update_state10)
 def main():
     # 配置日志
     logging.basicConfig(level=logging.INFO, filename='log.log', filemode='w+',
@@ -214,7 +229,7 @@ def main():
         with gr.Tab(label="推进器控制"):
             tab_pwm_control()
 
-    app.launch(server_name="0.0.0.0")
+    app.launch()
 
 
 if __name__ == "__main__":

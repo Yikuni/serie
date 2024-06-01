@@ -138,26 +138,33 @@ class DMPMotionCalculator(MotionCalculator):
 
 
 class MotionState(Enum):
-    TILT_LEFT = [(0, 50), (1, 50), (4, 50), (5, 50)]  # 向左倾斜
-    TILT_RIGHT = [(0, 50), (1, 50), (4, 50), (5, 50)]  # 向右倾斜
-    NO_TILT = [(0, 50), (1, 50), (4, 50), (5, 50)]  # 不倾斜
-    TURN_LEFT = [(2, 179), (3, 210)]  # 左转
-    TURN_RIGHT = [(2, 162), (3, 193)]  # 右转
-    NO_TURN = [(2, 179), (3, 193)]  # 直行
+    TILT_LEFT = [(0, 195), (1, 199), (4, 193), (5, 199)]  # 向左倾斜
+    TILT_RIGHT = [(0, 199), (1, 193), (4, 199), (5, 195)]  # 向右倾斜
+    NO_TILT = [(0, 201), (1, 195), (4, 195), (5, 201)]  # 不倾斜 ok
+    TURN_LEFT = [(2, 193), (3, 180)]  # 左转
+    TURN_RIGHT = [(2, 180), (3, 192)]  # 右转
+    NO_TURN = [(2, 177), (3, 178)]  # 直行
     STOP = [(2, 50), (3, 50)]  # 停止
-
+    UP = [(0, -1), (1, -1), (4, -1), (5, -1)]
+    DOWN = [(0, 1), (1, 1), (4, 1), (5, 1)]
+    NO_UP_OR_DOWN = [(0, 0)]
     def __init__(self, pwm_list):
         self.pwm_list = pwm_list
 
-    def activate(self):
+    def activate(self, offset=None):
         for p in self.pwm_list:
-            command.set_pwm(p[0], p[1])
+            if offset is not None and offset.__contains__(p[0]):
+                command.set_pwm(p[0], p[1] + offset[p[0]])
+            else:
+                command.set_pwm(p[0], p[1])
+
 
 
 class MotionController:
     def __init__(self):
         self.state1 = MotionState.STOP
         self.state2 = MotionState.NO_TILT
+        self.state3 = MotionState.NO_UP_OR_DOWN
 
     @staticmethod
     def init_pwm():
@@ -174,7 +181,10 @@ class MotionController:
             if self.state1 != state:
                 self.state1 = state
                 state.activate()
+        elif state in (MotionState.NO_UP_OR_DOWN, MotionState.UP, MotionState.DOWN):
+            self.state3 = state
+            self.state2.activate({key: value for key, value in self.state3.pwm_list})
         else:
             if self.state2 != state:
                 self.state2 = state
-                state.activate()
+                state.activate({key: value for key, value in self.state3.pwm_list})

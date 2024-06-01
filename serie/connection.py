@@ -1,11 +1,9 @@
-import logging
 import queue
 import threading
 import time
 
 import serial
 import serial.tools.list_ports
-from serial import Serial
 import logging
 from serie import data
 
@@ -15,7 +13,8 @@ read_t = None
 motion_t = None
 motion_update_gap = 0.1
 write_lock = threading.RLock()
-write_msg_queue = queue.Queue()
+write_msg_queue = queue.SimpleQueue()
+msg_send_interval_ = 0.02
 
 
 def get_ports():
@@ -29,11 +28,14 @@ def get_ports():
 
 
 # 连接
-def connect(device_name=None, baud_rate=115200, port_index=0, update_motion_gap_=0.1, timeout=1):
+def connect(device_name=None, baud_rate=115200, port_index=0,
+            update_motion_gap_=0.1, timeout=1, msg_send_interval=0.02,):
     global conn
     global read_t
     global motion_t
     global motion_update_gap
+    global msg_send_interval_
+    msg_send_interval_ = msg_send_interval
     motion_update_gap = update_motion_gap_
     ports_list = list(serial.tools.list_ports.comports())
     if len(ports_list) == 0 and device_name is None:
@@ -112,8 +114,10 @@ def write(msg):
 
 def write_thread():
     while is_connected():
-        time.sleep(0.01)
-        if not write_msg_queue.empty():
-            msg = write_msg_queue.get()
+        time.sleep(msg_send_interval_)
+        try:
+            msg = write_msg_queue.get(block=False)
             get_conn().write((msg + ";").encode("ascii"))
             logger.debug("sent msg: {}".format(msg))
+        except queue.Empty:
+            pass
